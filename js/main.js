@@ -40,7 +40,7 @@ function main() {
     // get complex element
     e = doc.select('/html/body/svg');
  
-    // iterate by its sub nodes
+    // sub nodes iteration
     for(let n of e.elements()){
        console.log('---- svg element-----\n', n.xml());
     }
