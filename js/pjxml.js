@@ -8,7 +8,7 @@
  *  - converted to classes,
  *  - empty strings content is skipped
  *  - attributes property set only if exist
- *  - select returns undefined if not found
+ *  - select returns null (instead []) if not found
  */
 
 class pjLexer {
@@ -24,8 +24,8 @@ class pjLexer {
   static isSpace(ch) { return ' \t\n\r'.indexOf(ch) >= 0; }
   static isSpaces(s) { for (let c of s) { if (!pjLexer.isSpace(c)) return false; } return true; }
   static isMarkup(ch) { return '<>?!&='.indexOf(ch) >= 0; }
-  read() { return this.pos < this.xml.length ? this.xml.charAt(this.pos++) : null; }
-  peek() { return this.pos < this.xml.length ? this.xml.charAt([this.pos]) : null; }
+  read() { return this.pos < this.xml.length ? this.xml[this.pos++] : null; }
+  peek() { return this.pos < this.xml.length ? this.xml[this.pos] : null; }
   consume(ch) { return this.peek() === ch ? this.read() : null; }
   eof() { return this.pos >= this.xml.length; }
 
@@ -35,8 +35,8 @@ class pjLexer {
   }
 
   getEntity(entity) {
-    if (entity.charAt(0) === '#') {
-      let n = entity.charAt(1) === 'x' ? parseInt(entity.substring(2), 16) : parseInt(entity.substring(1));
+    if (entity[0] === '#') {
+      let n = entity[1] === 'x' ? parseInt(entity.substring(2), 16) : parseInt(entity.substring(1));
       entity = String.fromCharCode(n);
     } else if (this.entities[entity]) {
       entity = this.entities[entity];
@@ -87,7 +87,7 @@ class pjLexer {
   consumeUntil(marker) {
     let s = '', ch;
     while (ch = this.nextChar()) {
-      if (ch === marker.charAt(0) && this.consumeString(marker.substring(1))) {
+      if (ch === marker[0] && this.consumeString(marker.substring(1))) {
         return s;
       }
       s += ch;
@@ -192,10 +192,10 @@ class pjLexer {
 
 class pjNode {
   static DOCUMENT_NODE = 1;
-  static PROC_INSTR_NODE = 2;
+  static PROCESSING_INSTRUCTION_NODE = 2;
   static ELEMENT_NODE = 3;
   static COMMENT_NODE = 4;
- 
+
   constructor(type) {
     this.type = type;
     if (type !== pjNode.ELEMENT_NODE) {
@@ -239,7 +239,7 @@ class pjNode {
           } break;
 
           case '?': {
-            let pn = new pjNode(pjNode.PROC_INSTR_NODE);
+            let pn = new pjNode(pjNode.PROCESSING_INSTRUCTION_NODE);
             pn.append(lex.consumeUntil('?>'));
             this.append(pn);
           } break;
@@ -352,7 +352,7 @@ class pjNode {
 
   elements(name) {
     return this.content.reduce((ea, o) => {
-      if (o instanceof pjNode && o.type === pjNode.ELEMENT_NODE && (!name || name === '*' || o.name === name)) {
+      if (o instanceof pjNode && o.type === pjNode.ELEMENT_NODE && (!name || name === '*' || o.name == name)) {
         ea.push(o);
       }
 
@@ -382,7 +382,7 @@ class pjNode {
           s += '/>';
         }
         break;
-      case pjNode.PROC_INSTR_NODE:
+      case pjNode.PROCESSING_INSTRUCTION_NODE:
         break;
       case pjNode.COMMENT_NODE:
         break;
