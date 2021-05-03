@@ -1,169 +1,124 @@
-var pjXML = (function () {
-  var me = {};
-  var node_types = {
-    ELEMENT_NODE: 1,
-    ATTRIBUTE_NODE: 2,
-    TEXT_NODE: 3,
-    CDATA_SECTION_NODE: 4,
-    ENTITY_REFERENCE_NODE: 5,
-    ENTITY_NODE: 6,
-    PROCESSING_INSTRUCTION_NODE: 7,
-    COMMENT_NODE: 8,
-    DOCUMENT_NODE: 9,
-    DOCUMENT_TYPE_NODE: 10,
-    DOCUMENT_FRAGMENT_NODE: 11,
-    NOTATION_NODE: 12
-  };
+/*
+ * Pure JavaScript XML parser(pjxml)
+ * Scott Means
+ * https://github.com/smeans/pjxml
+ * MIT license
+ * 
+ * Modifications: 
+ *  - converted to classes,
+ *  - empty strings content is skipped
+ *  - attributes property set only if exist
+ *  - select returns undefined if not found
+ */
 
-  function Lexer(xml) {
+class pjLexer {
+  constructor(xml) {
     this.xml = xml;
-    this.entities = {lt:'<', gt:'>', amp:'&', apos:'\'', quot:'"'};
+    this.entities = { lt: '<', gt: '>', amp: '&', apos: '\'', quot: '"' };
     this.pos = 0;
     this.inDTD = false;
-  };
-
-  Lexer.isSpace = function (ch) {
-    return ' \t\n\r'.indexOf(ch) >= 0;
   }
 
-  Lexer.isMarkup = function (ch) {
-    return '<>?!&='.indexOf(ch) >= 0;
-  }
+  static escapeMap = { '<': 'lt', '>': 'gt', '&': 'amp', '\'': 'apos', '"': 'quot' };
+  static escapeXML(s) { return s.replace(/([<>&'"])/g, function (m, p1) { return '&' + pjLexer.escapeMap[p1] + ';'; }); }
+  static isSpace(ch) { return ' \t\n\r'.indexOf(ch) >= 0; }
+  static isSpaces(s) { for (let c of s) { if (!pjLexer.isSpace(c)) return false; } return true; }
+  static isMarkup(ch) { return '<>?!&='.indexOf(ch) >= 0; }
+  read() { return this.pos < this.xml.length ? this.xml.charAt(this.pos++) : null; }
+  peek() { return this.pos < this.xml.length ? this.xml.charAt([this.pos]) : null; }
+  consume(ch) { return this.peek() === ch ? this.read() : null; }
+  eof() { return this.pos >= this.xml.length; }
 
-  Lexer.escapeMap = {'<':'lt', '>':'gt', '&':'amp', '\'':'apos', '"':'quot'};
-  Lexer.escapeXML = function (s) {
-    var lex = this;
-
-    return s.replace(/([<>&'"])/g, function (m, p1) { return '&' + Lexer.escapeMap[p1] + ';'; });
-  }
-
-  Lexer.prototype.read = function (cch) {
-    return this.pos < this.xml.length ? this.xml[this.pos++] : null;
-  }
-
-  Lexer.prototype.peek = function () {
-    return this.pos < this.xml.length ? this.xml[this.pos] : null;
-  }
-
-  Lexer.prototype.consume = function (ch) {
-    return this.peek() == ch ? this.read() : null;
-  }
-
-  Lexer.prototype.eof = function () {
-    return this.pos >= this.xml.length;
-  }
-
-  Lexer.prototype.skip = function (cch) {
+  skip(cch) {
     this.pos = Math.min(this.xml.length, this.pos + cch);
-
     return this.eof();
   }
 
-  Lexer.prototype.getEntity = function (entity) {
-    if (entity[0] == '#') {
-      var n = entity[1] == 'x' ? parseInt(entity.substring(2), 16) : parseInt(entity.substring(1));
-
+  getEntity(entity) {
+    if (entity.charAt(0) === '#') {
+      let n = entity.charAt(1) === 'x' ? parseInt(entity.substring(2), 16) : parseInt(entity.substring(1));
       entity = String.fromCharCode(n);
     } else if (this.entities[entity]) {
       entity = this.entities[entity];
     }
-
     return entity;
   };
 
-  Lexer.prototype.replaceEntities = function (s) {
-    var lex = this;
-
-    return s.replace(/&([^;]*);/g, function (m, p1) { return lex.getEntity(p1); });
+  replaceEntities(s) {
+    return s.replace(/&([^;]*);/g, function (m, p1) { return this.getEntity(p1); });
   }
 
-  Lexer.prototype.nextChar = function () {
-    if (this.pos >= this.xml.length) {
+  nextChar() {
+    if (this.pos >= this.xml.length)
       return null;
-    }
-
-    var ch = this.read();
-    if (ch == '&' || (this.inDTD && ch == '%')) {
-      var er = '';
-      while ((ch = this.read()) != ';' && ch) {
+    let ch = this.read();
+    if (ch === '&' || (this.inDTD && ch === '%')) {
+      let er = '';
+      while ((ch = this.read()) !== ';' && ch) {
         er += ch;
       }
-
       ch = this.getEntity(er);
     }
-
     return ch;
-  };
+  }
 
-  Lexer.prototype.readString = function (cch) {
-    var s = '', ch;
-
-    while (s.length < cch && (ch = this.nextChar())) {
+  readString(cch) {
+    let s = '', ch;
+    while (s.length < cch && (ch = this.nextChar()))
       s += ch;
-    }
-
     return s.length > cch ? s.substring(0, cch) : s;
   }
 
-  Lexer.prototype.peekString = function (cch) {
-    var ip = this.pos;
-    var s = this.readString(cch);
+  peekString(cch) {
+    let ip = this.pos;
+    let s = this.readString(cch);
     this.pos = ip;
-
     return s;
   }
 
-  Lexer.prototype.consumeString = function (s) {
-    if (this.peekString(s.length) == s) {
+  consumeString(s) {
+    if (this.peekString(s.length) === s) {
       this.readString(s.length);
-
       return true;
     }
-
     return false;
   }
 
-  Lexer.prototype.consumeUntil = function (marker) {
-    var s = '', ch;
-
+  consumeUntil(marker) {
+    let s = '', ch;
     while (ch = this.nextChar()) {
-      if (ch == marker[0] && this.consumeString(marker.substring(1))) {
+      if (ch === marker.charAt(0) && this.consumeString(marker.substring(1))) {
         return s;
       }
-
       s += ch;
     }
-
     return s;
   }
 
-  Lexer.prototype.skipSpace = function () {
-    while (Lexer.isSpace(this.peek())) {
+  skipSpace() {
+    while (pjLexer.isSpace(this.peek())) {
       this.read();
     }
   }
 
-  Lexer.prototype.readName = function () {
-    var ch, name = '';
-
-    while ((ch = this.peek()) && !(Lexer.isSpace(ch) || Lexer.isMarkup(ch))) {
+  readName() {
+    let ch, name = '';
+    while ((ch = this.peek()) && !(pjLexer.isSpace(ch) || pjLexer.isMarkup(ch))) {
       name += this.read();
     }
-
     return name;
   }
 
-  Lexer.prototype.readQuotedString = function () {
-    var ch, sd, s = '';
+  readQuotedString() {
+    let ch, sd, s = '';
     sd = this.read();
-    while ((ch = this.read()) && ch != sd) {
+    while ((ch = this.read()) && ch !== sd) {
       s += ch;
     }
-
     return s;
   }
 
-  Lexer.prototype.parseExternalID = function () {
+  parseExternalID() {
     if (this.consumeString('SYSTEM')) {
       this.skipSpace();
       this.readString();
@@ -175,106 +130,105 @@ var pjXML = (function () {
     }
   }
 
-  Lexer.prototype.parseEntityDecl = function () {
+  parseEntityDecl() {
     this.skipSpace();
-    if (this.peek() == '%') {
+    if (this.peek() === '%') {
       this.read();
     }
     this.skipSpace();
-    var n = this.readName();
+    let n = this.readName();
     this.skipSpace();
-    var v = this.replaceEntities(this.readQuotedString());
+    let v = this.replaceEntities(this.readQuotedString());
     this.consumeUntil('>');
     this.entities[n] = v;
   }
 
-  Lexer.prototype.parseDecl = function () {
-     this.consumeString('<!');
-     if (this.peek() == '[') {
-       if (this.consumeString('[INCLUDE[')) {
-         this.skipSpace();
-         while (!this.consumeString(']]>')) {
-           this.parseDecl();
-           this.skipSpace();
-         }
-       } else {
-         this.consumeUntil(']]>');
-       }
-     } else {
-       if (this.consumeString('ENTITY')) {
-         this.parseEntityDecl();
-       } else {
-         this.consumeUntil('>');
-       }
-     }
+  parseDecl() {
+    this.consumeString('<!');
+    if (this.peek() === '[') {
+      if (this.consumeString('[INCLUDE[')) {
+        this.skipSpace();
+        while (!this.consumeString(']]>')) {
+          this.parseDecl();
+          this.skipSpace();
+        }
+      } else {
+        this.consumeUntil(']]>');
+      }
+    } else {
+      if (this.consumeString('ENTITY')) {
+        this.parseEntityDecl();
+      } else {
+        this.consumeUntil('>');
+      }
+    }
   }
 
-  Lexer.prototype.parseDTD = function () {
+  parseDTD() {
     this.inDTD = true;
     this.skipSpace();
     this.readName();
     this.skipSpace();
     this.parseExternalID();
     this.skipSpace();
-
     if (this.consumeString('>')) {
       this.inDTD = false;
       return;
     }
-
     if (!this.consumeString('[')) {
-      // !!!LATER!!! report error
       this.consumeUntil('>');
-
       this.inDTD = false;
       return;
     }
-
     this.skipSpace()
     while (!this.consumeString(']')) {
       this.parseDecl();
       this.skipSpace();
     }
-
     this.consumeUntil('>');
-
     this.inDTD = false;
   }
+}
 
-  function Node(type) {
+class pjNode {
+  static DOCUMENT_NODE = 1;
+  static PROC_INSTR_NODE = 2;
+  static ELEMENT_NODE = 3;
+  static COMMENT_NODE = 4;
+ 
+  constructor(type) {
     this.type = type;
-    this.content = [];
-  };
+    if (type !== pjNode.ELEMENT_NODE) {
+      this.content = [];
+    }
+  }
 
-  Node.prototype.append = function (o) {
+  append(o) {
     switch (typeof o) {
       case 'string': {
-        if (this.content.length && typeof this.content[this.content.length-1] == 'string') {
-          this.content[this.content.length-1] += o;
-
+        if (this.content.length && typeof this.content[this.content.length - 1] === 'string') {
+          this.content[this.content.length - 1] += o;
           return;
         }
       } break;
     }
-
     this.content.push(o);
-
     return this;
   }
 
-  Node.prototype.parse = function (lex) {
-    var ch;
-    var s = '';
-
+  parse(lex) {
+    let ch = '';
+    let s = '';
     while (ch = lex.nextChar()) {
-      if (ch == '<') {
-        this.append(s);
+      if (ch === '<') {
+        if (!pjLexer.isSpaces(s)) // remove whitespaces strings.
+          this.append(s);
         s = '';
         ch = lex.nextChar();
         switch (ch) {
           case '!': {
             if (lex.consumeString('--')) {
-              var cn = new Node(node_types.COMMENT_NODE);
+              let cn = new pjNode(pjNode.COMMENT_NODE);
               cn.append(lex.consumeUntil('-->'));
               this.append(cn);
             } else if (lex.consumeString('[CDATA[')) {
@@ -285,34 +239,32 @@ var pjXML = (function () {
           } break;
 
           case '?': {
-            var pn = new Node(node_types.PROCESSING_INSTRUCTION_NODE);
+            let pn = new pjNode(pjNode.PROC_INSTR_NODE);
             pn.append(lex.consumeUntil('?>'));
             this.append(pn);
           } break;
 
           case '/': {
             lex.consumeUntil('>');
-
             return;
           }
 
           default: {
-            var en = new Node(node_types.ELEMENT_NODE);
+            let en = new pjNode(pjNode.ELEMENT_NODE);
             en.name = ch + lex.readName();
-            en.attributes = {};
-
-            var ch;
-            while ((ch = lex.peek()) && (ch != '/' && ch != '>')) {
+            while ((ch = lex.peek()) && (ch !== '/' && ch !== '>')) {
               lex.skipSpace();
-              var an = lex.readName();
+              let an = lex.readName();
               lex.consumeString('=');
+              if (!en.attributes)
+                en.attributes = {};
               en.attributes[an] = lex.replaceEntities(lex.readQuotedString());
               lex.skipSpace();
             }
-
-            if (ch == '/') {
+            en.content = [];
+            if (ch === '/') {
               lex.consumeString('/>');
-            } else if (ch == '>') {
+            } else if (ch === '>') {
               lex.nextChar();
               en.parse(lex);
             }
@@ -323,43 +275,38 @@ var pjXML = (function () {
         s += ch;
       }
     }
-
     if (s.length) {
       this.append(s);
     }
-  };
+  }
 
-  Node.prototype.select = function (xpath) {
+  select0(xpath) {
     if (!Array.isArray(xpath)) {
       xpath = xpath.replace('//', '/>').split('/');
       xpath = xpath.reduce((a, v) => {
         if (v) {
           a.push(v);
         }
-
         return a;
       }, []);
     }
-
-    if (xpath.length < 1) {
+    if (xpath.length === 0) {
       return [];
     }
-
-    if (xpath[0][0] == '@') {
-      return  this.attributes ? [this.attributes[xpath[0].substr(1)]] : [];
+    if (xpath[0].charAt(0) === '@') {
+      return this.attributes ? [this.attributes[xpath[0].substr(1)]] : [];
     }
 
-    var ra = [];
+    let ra = [];
+    let exp = xpath[0];
+    let recurse = exp.charAt(0) === '>';
+    let name = recurse ? exp.substr(1) : exp;
 
-    var exp = xpath[0];
-    var recurse = exp[0] == '>';
-    var name = recurse ? exp.substr(1) : exp;
-
-    var ea = this.elements(name);
+    let ea = this.elements(name);
 
     if (xpath.length > 1) {
       ea.map((el) => {
-        ra = ra.concat(el.select(xpath.slice(1)));
+        ra = ra.concat(el.select0(xpath.slice(1)));
       });
     } else {
       ra = ra.concat(ea);
@@ -367,43 +314,45 @@ var pjXML = (function () {
 
     if (recurse) {
       this.elements().map((el) => {
-        ra = ra.concat(el.select(xpath));
+        ra = ra.concat(el.select0(xpath));
       });
     }
 
-    return ra.length == 1 ? ra[0] : ra;
+    return ra.length === 1 ? ra[0] : ra;
   }
 
-  function emitContent(node, func) {
-    var s = '';
+  select(xpath){
+    let ra = this.select0(xpath);
+    return Array.isArray(ra) && ra.length === 0 ? undefined : ra;
+  }
 
-    for (var i = 0; i < node.content.length; i++) {
-      var o = node.content[i];
+  emitContent(node, func) {
+    let s = '';
+    for (let i = 0; i < node.content.length; i++) {
+      let o = node.content[i];
 
-      if (typeof o == 'string') {
-        s += Lexer.escapeXML(o);
+      if (typeof o === 'string') {
+        s += pjLexer.escapeXML(o);
       } else {
         s += o[func]();
       }
     }
-
     return s;
   }
 
-  Node.prototype.firstElement = function () {
-    for (var i = 0; i < this.content.length; i++) {
-      var o = this.content[i];
-      if (o instanceof Node && o.type == node_types.ELEMENT_NODE) {
+  firstElement() {
+    for (let i = 0; i < this.content.length; i++) {
+      let o = this.content[i];
+      if (o instanceof pjNode && o.type === pjNode.ELEMENT_NODE) {
         return o;
       }
     }
-
     return null;
   }
 
-  Node.prototype.elements = function (name) {
+  elements(name) {
     return this.content.reduce((ea, o) => {
-      if (o instanceof Node && o.type == node_types.ELEMENT_NODE && (!name || name == '*' || o.name == name)) {
+      if (o instanceof pjNode && o.type === pjNode.ELEMENT_NODE && (!name || name === '*' || o.name === name)) {
         ea.push(o);
       }
 
@@ -411,56 +360,45 @@ var pjXML = (function () {
     }, []);
   }
 
-  Node.prototype.text = function () {
-    return emitContent(this, 'text');
-  }
+  text() { return this.emitContent(this, 'text'); }
 
-  Node.prototype.xml = function () {
-    var s = '';
-
+  xml() {
+    let s = '';
     switch (this.type) {
-      case node_types.ELEMENT_NODE: {
+      case pjNode.ELEMENT_NODE:
         s += '<' + this.name;
         if (this.attributes) {
-          for (var name in this.attributes) {
+          for (let name in this.attributes) {
             if (this.attributes.hasOwnProperty(name)) {
-              s += ' ' + name + '="' + Lexer.escapeXML(this.attributes[name]) + '"';
+              s += ' ' + name + '="' + pjLexer.escapeXML(this.attributes[name]) + '"';
             }
           }
         }
-
         if (this.content.length) {
           s += '>';
-          s += emitContent(this, 'xml');
+          s += this.emitContent(this, 'xml');
           s += '</' + this.name + '>';
         } else {
           s += '/>';
         }
-      } break;
-      case node_types.PROCESSING_INSTRUCTION_NODE: {
-      } break;
-      case node_types.COMMENT_NODE: {
-      } break;
-      default: {
-        s = emitContent(this, 'xml');
-      } break;
+        break;
+      case pjNode.PROC_INSTR_NODE:
+        break;
+      case pjNode.COMMENT_NODE:
+        break;
+      default:
+        s = this.emitContent(this, 'xml');
+        break;
     }
-
     return s;
   }
+}
 
-  me.parse = function (xml) {
-    var lex = new Lexer(xml);
-
-    var doc = new Node(node_types.DOCUMENT_NODE);
+class pjXML {
+  static parse(xml) {
+    let lex = new pjLexer(xml);
+    let doc = new pjNode(pjNode.DOCUMENT_NODE);
     doc.parse(lex);
-
     return doc;
   }
-
-  return me;
-}());
-
-if(typeof module === "object" && module.exports) {
-  module.exports = pjXML;
 }
