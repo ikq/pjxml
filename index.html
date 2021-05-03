@@ -1,46 +1,18 @@
-<html lang="en">
+<!DOCTYPE html>
+<!--
+    test of XML parser
+-->
+<html>
+
 <head>
-  <meta charset="utf-8">
-
-  <title>pjXML - Pure JavaScript XML Library</title>
-  <meta name="description" content="pjXML - The Pure JavaScript XML library.">
-  <meta name="author" content="Scott Means">
-
-  <link rel="stylesheet" href="css/style.css?v=1.0">
-
-  <!--[if lt IE 9]>
-  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-  <![endif]-->
-
-  <script src="js/jquery-1.11.3.min.js"></script>
+    <title>test</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="favicon.png">
 </head>
 
 <body>
-  <h1>pjXML - Pure JavaScript XML Library</h1>
-  <p>There are several XML wrapper libraries available for JavaScript that use
-    native XML objects (like <code>XMLHttpRequest</code>) to parse XML and provide
-    DOM access to the underlying document. This library is designed to provide
-    identical functionality on both the client and server sides for parsing,
-    manipulating, and emitting XML documents.</p>
-    <h2>usage</h2>
-    <pre class="code">
-      &lt;script src=&quot;js/pjxml.js&quot;&gt;&lt;/script&gt;
-
-      . . .
-
-      var doc = pjXML.parse('&lt;root&gt;Hello,&amp;#160;XML.&lt;/root&gt;');
-    </pre>
-    <textarea name="sampleXML" cols="60" rows="10">&lt;!--Hello, comment.--&gt;&lt;root&gt;Hello,&amp;#160;XML.&lt;/root&gt;</textarea>
-    <p><button name="parseSample">parse</button></p>
-    <p><label>select</label><input type="text" name="xpath"/><br/>
-    <pre name="selectResult"></pre></p>
-    <h3>JSON:</h3>
-    <pre name="sampleJson"></pre>
-    <h3>text:</h3>
-    <pre name="sampleText"></pre>
-    <h3>XML:</h3>
-    <pre name="sampleXML"></pre>
-  <script src="js/pjxml.js"></script>
-  <script src="js/main.js"></script>
+    <script defer src= "pjxml.js"></script>
+    <script defer src="test.js"></script>
 </body>
+
 </html>
