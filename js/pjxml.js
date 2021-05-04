@@ -5,7 +5,7 @@
  * MIT license
  * 
  * Modifications: 
- * Converted to classes, whitespaces XML strings removed, select returns undefined if not found
+ * Converted to classes, XML whitespaces strings removed, select returns null if not found
  */
 
 class pjLexer {
@@ -17,7 +17,7 @@ class pjLexer {
   }
 
   static escapeMap = { '<': 'lt', '>': 'gt', '&': 'amp', '\'': 'apos', '"': 'quot' };
-  static escapeXML(s) { return s.replace(/([<>&'"])/g, function (m, p1) { return '&' + pjLexer.escapeMap[p1] + ';'; }); }
+  static escapeXML(s) { return s.replace(/([<>&'"])/g, (m, p1)=>{ return '&' + pjLexer.escapeMap[p1] + ';'; }); }
   static isSpace(ch) { return ' \t\n\r'.indexOf(ch) >= 0; }
   static isSpaces(s) { for (let c of s) { if (!pjLexer.isSpace(c)) return false; } return true; }
   static isMarkup(ch) { return '<>?!&='.indexOf(ch) >= 0; }
@@ -42,7 +42,7 @@ class pjLexer {
   };
 
   replaceEntities(s) {
-    return s.replace(/&([^;]*);/g, function (m, p1) { return this.getEntity(p1); });
+    return s.replace(/&([^;]*);/g, (m, p1)=>{ return this.getEntity(p1); });
   }
 
   nextChar() {
