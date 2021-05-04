@@ -1,14 +1,11 @@
 /*
- * Pure JavaScript XML parser(pjxml)
+ * Pure JavaScript XML parser
  * Scott Means
  * https://github.com/smeans/pjxml
  * MIT license
  * 
  * Modifications: 
- *  - converted to classes,
- *  - empty strings content is skipped
- *  - attributes property set only if exist
- *  - select returns null (instead []) if not found
+ * Converted to classes, empty strings content is skipped, select returns null if not found
  */
 
 class pjLexer {
@@ -24,8 +21,8 @@ class pjLexer {
   static isSpace(ch) { return ' \t\n\r'.indexOf(ch) >= 0; }
   static isSpaces(s) { for (let c of s) { if (!pjLexer.isSpace(c)) return false; } return true; }
   static isMarkup(ch) { return '<>?!&='.indexOf(ch) >= 0; }
-  read() { return this.pos < this.xml.length ? this.xml[this.pos++] : null; }
-  peek() { return this.pos < this.xml.length ? this.xml[this.pos] : null; }
+  read() { return this.pos < this.xml.length ? this.xml.charAt(this.pos++) : null; }
+  peek() { return this.pos < this.xml.length ? this.xml.charAt(this.pos) : null; }
   consume(ch) { return this.peek() === ch ? this.read() : null; }
   eof() { return this.pos >= this.xml.length; }
 
@@ -35,8 +32,8 @@ class pjLexer {
   }
 
   getEntity(entity) {
-    if (entity[0] === '#') {
-      let n = entity[1] === 'x' ? parseInt(entity.substring(2), 16) : parseInt(entity.substring(1));
+    if (entity.charAt(0) === '#') {
+      let n = entity.charAt(1) === 'x' ? parseInt(entity.substring(2), 16) : parseInt(entity.substring(1));
       entity = String.fromCharCode(n);
     } else if (this.entities[entity]) {
       entity = this.entities[entity];
@@ -87,7 +84,7 @@ class pjLexer {
   consumeUntil(marker) {
     let s = '', ch;
     while (ch = this.nextChar()) {
-      if (ch === marker[0] && this.consumeString(marker.substring(1))) {
+      if (ch === marker.charAt(0) && this.consumeString(marker.substring(1))) {
         return s;
       }
       s += ch;
@@ -275,7 +272,7 @@ class pjNode {
         s += ch;
       }
     }
-    if (s.length) {
+    if (!pjLexer.isSpaces(s)) {
       this.append(s);
     }
   }
@@ -321,7 +318,7 @@ class pjNode {
     return ra.length === 1 ? ra[0] : ra;
   }
 
-  select(xpath){
+  select(xpath) {
     let ra = this.select0(xpath);
     return Array.isArray(ra) && ra.length === 0 ? undefined : ra;
   }
