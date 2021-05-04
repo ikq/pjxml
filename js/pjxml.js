@@ -5,7 +5,7 @@
  * MIT license
  * 
  * Modifications: 
- * Converted to classes, XML whitespaces strings removed, select returns null if not found
+ * Converted to classes, XML whitespaces strings removed, select returns undefined if not found
  */
 
 class pjLexer {
