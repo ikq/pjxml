@@ -1,3 +1,5 @@
+# The clone is original pjxml converted to javascript class syntax
+
 # Pure JavaScript XML (pjxml)
 This package provides a very lightweight, forgiving XML parser. It's 100%
 JavaScript and while it is Node-compliant it has no package dependencies.
