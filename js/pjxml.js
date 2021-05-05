@@ -100,7 +100,7 @@ class pjLexer {
 
   readName() {
     let ch, name = '';
-    while ((ch = this.peek()) && !(pjLexer.isSpace(ch) || pjLexer.isMarkup(ch))) {
+    while ((ch = this.peek()) && !(pjLexer.isSpace(ch) || pjLexer.isMarkup(ch) || ch === '/')) {
       name += this.read();
     }
     return name;
