@@ -1,11 +1,14 @@
 /*
  * Pure JavaScript XML parser
- * Scott Means
+ * Author Scott Means
  * https://github.com/smeans/pjxml
  * MIT license
- * 
+ *
  * Modifications: 
- * Converted to classes, XML whitespaces strings removed, select returns undefined if not found
+ *  Converted to classes.
+ *  XML whitespaces strings removed.
+ *  select returns undefined if not found.
+ *  Fixed empty content element parsing.
  */
 
 class pjLexer {
